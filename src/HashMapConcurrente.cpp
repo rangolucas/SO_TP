@@ -2,7 +2,6 @@
 #define CHM_CPP
 
 #include <iostream>
-#include <fstream>
 #include <pthread.h>
 
 #include "HashMapConcurrente.hpp"
@@ -18,7 +17,20 @@ unsigned int HashMapConcurrente::hashIndex(std::string clave) {
 }
 
 void HashMapConcurrente::incrementar(std::string clave) {
-    // Completar (Ejercicio 2)
+    unsigned int index = hashIndex(clave);
+    ListaAtomica<hashMapPair> *pLista = tabla[index];
+    tablaMtx[index].lock();
+    auto iterador = pLista->crearIt();
+    while (iterador.haySiguiente() && iterador.siguiente().first != clave) {
+        iterador.avanzar();
+    }
+    if (!iterador.haySiguiente()) {
+        pLista->insertar(hashMapPair(clave, 1));
+
+    } else {
+        iterador.siguiente().second++;
+    }
+    tablaMtx[index].unlock();
 }
 
 std::vector<std::string> HashMapConcurrente::claves() {
