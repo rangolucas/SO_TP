@@ -26,7 +26,7 @@ void HashMapConcurrente::incrementar(std::string clave) {
     }
     if (!iterador.haySiguiente()) {
         pLista->insertar(hashMapPair(clave, 1));
-
+        _claves.push_back(clave);
     } else {
         iterador.siguiente().second++;
     }
@@ -34,7 +34,7 @@ void HashMapConcurrente::incrementar(std::string clave) {
 }
 
 std::vector<std::string> HashMapConcurrente::claves() {
-    // Completar (Ejercicio 2)
+    return _claves;
 }
 
 unsigned int HashMapConcurrente::valor(std::string clave) {
