@@ -6,7 +6,10 @@
 
 template<typename T>
 class ListaAtomica {
- private:
+private:
+
+    std::mutex mtx;
+
     struct Nodo {
         Nodo(const T &val) : _valor(val), _siguiente(nullptr) {}
 
@@ -15,7 +18,6 @@ class ListaAtomica {
     };
 
     std::atomic<Nodo *> _cabeza;
-    std::mutex mtx;
 
  public:
     ListaAtomica() : _cabeza(nullptr) {}
@@ -31,15 +33,9 @@ class ListaAtomica {
     }
 
     void insertar(const T &valor) {
-        // Completar (Ejercicio 1)
-        // Crear un nodo
-        Nodo *n = new Nodo(valor);
-
-        std::lock_guard<std::mutex> lock(mtx);
-
-        // Insertar un nodo al comienzo de la lista
+        Nodo *n = new Nodo (valor);
+        std::lock_guard<std::mutex> lk(mtx);
         n->_siguiente = _cabeza.load();
-
         _cabeza.store(n);
     }
 

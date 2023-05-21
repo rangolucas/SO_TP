@@ -2,7 +2,6 @@
 #define CHM_CPP
 
 #include <iostream>
-#include <fstream>
 #include <pthread.h>
 
 #include "HashMapConcurrente.hpp"
