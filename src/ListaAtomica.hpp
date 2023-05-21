@@ -2,6 +2,7 @@
 #define LISTA_ATOMICA_HPP
 
 #include <atomic>
+#include <mutex>
 
 template<typename T>
 class ListaAtomica {
@@ -14,6 +15,7 @@ class ListaAtomica {
     };
 
     std::atomic<Nodo *> _cabeza;
+    std::mutex mtx;
 
  public:
     ListaAtomica() : _cabeza(nullptr) {}
@@ -30,6 +32,15 @@ class ListaAtomica {
 
     void insertar(const T &valor) {
         // Completar (Ejercicio 1)
+        // Crear un nodo
+        Nodo *n = new Nodo(valor);
+
+        std::lock_guard<std::mutex> lock(mtx);
+
+        // Insertar un nodo al comienzo de la lista
+        n->_siguiente = _cabeza.load();
+
+        _cabeza.store(n);
     }
 
     T &cabeza() const {

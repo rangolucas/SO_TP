@@ -9,6 +9,31 @@
 
 typedef std::pair<std::string, unsigned int> hashMapPair;
 
+struct Lightswitch{
+   unsigned int counter;
+   std::mutex self;
+
+   Lightswitch(){
+      counter = 0;
+   }
+
+   void lock(std::mutex& barrier){
+      self.lock();
+         counter++;
+         if (counter == 1)
+            barrier.lock();
+      self.unlock();
+   }
+   
+   void unlock(std::mutex& barrier){
+      self.lock();
+         counter--;
+         if (counter == 0)
+            barrier.unlock();
+      self.unlock();
+   }
+};
+
 class HashMapConcurrente {
  public:
     static const unsigned int cantLetras = 26;
@@ -24,6 +49,7 @@ class HashMapConcurrente {
 
  private:
     ListaAtomica<hashMapPair> *tabla[HashMapConcurrente::cantLetras];
+    std::vector<std::string> _claves;
 
     static unsigned int hashIndex(std::string clave);
 };
