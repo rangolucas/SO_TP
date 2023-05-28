@@ -3,101 +3,151 @@
 
 #include <iostream>
 #include <pthread.h>
+#include <thread>
 
 #include "HashMapConcurrente.hpp"
 
 std::array<std::mutex, HashMapConcurrente::cantLetras> mtx;
-Lightswitch* clavesSwitch; Lightswitch* incrementarSwitch;
-std::mutex noIncrementar; std::mutex noClaves;
+Lightswitch *clavesSwitch;
+Lightswitch *incrementarSwitch;
+std::mutex noIncrementar;
+std::mutex noClaves;
+std::mutex maximomtx;
+hashMapPair* maximoGlobal;
 
-HashMapConcurrente::HashMapConcurrente() {
-    for (unsigned int i = 0; i < HashMapConcurrente::cantLetras; i++) {
+std::atomic<uint> nextPos;
+
+HashMapConcurrente::HashMapConcurrente(){
+    for (uint i = 0; i < HashMapConcurrente::cantLetras; i++)
         tabla[i] = new ListaAtomica<hashMapPair>();
-    }
+        
     clavesSwitch = new Lightswitch();
     incrementarSwitch = new Lightswitch();
+    maximoGlobal = &{"", 0};
+    nextPos = 0;
 }
 
-unsigned int HashMapConcurrente::hashIndex(std::string clave) {
-    return (unsigned int)(clave[0] - 'a');
+uint HashMapConcurrente::hashIndex(std::string clave){
+    return (uint)(clave[0] - 'a');
 }
 
-void HashMapConcurrente::incrementar(std::string clave) {
-    unsigned int index = hashIndex(clave);
-    ListaAtomica<hashMapPair> * list = tabla[index];
+void HashMapConcurrente::incrementar(std::string clave){
+    uint index = hashIndex(clave);
+    ListaAtomica<hashMapPair> *list = tabla[index];
     std::lock_guard<std::mutex> lock(mtx[index]);
 
     auto it = tabla[index]->crearIt();
 
     while (it.haySiguiente() && it.siguiente().first != clave) it.avanzar();
 
-    if(!it.haySiguiente()){
-        noIncrementar.lock();
-            incrementarSwitch->lock(noClaves);
-        noIncrementar.unlock();
+    if (!it.haySiguiente()){
+        //noIncrementar.lock();
+        //incrementarSwitch->lock(noClaves);
+        //noIncrementar.unlock();
 
-            list->insertar(hashMapPair(clave, 1));
-            _claves.push_back(clave);
+        noClaves.lock();
 
-        incrementarSwitch->unlock(noClaves);
+        list->insertar(hashMapPair(clave, 1));
+        _claves.push_back(clave);
+    
+        noClaves.unlock();
+
+        //incrementarSwitch->unlock(noClaves);
     } else {
         it.siguiente().second++;
     }
 }
-
-/**
- * Primera Idea:
- * Claves tiene prioridad sobre escritura, de esta forma cuando un proceso solicite todas las claves
- * existentes, no se generarán condiciones de carrera sobre estas.
- * Esto podría generar starvation en los procesos que intentan agregar una clave, pero al no hacerlo
- * se podrian generar condiciones de carrera sobre las claves.
- */
-std::vector<std::string> HashMapConcurrente::claves() {
+/*
+std::vector<std::string> HashMapConcurrente::claves(){
     clavesSwitch->lock(noIncrementar);
-        noClaves.lock();
-            std::vector<std::string> res = _claves;
-        noClaves.unlock();
+    noClaves.lock();
+    std::vector<std::string> res = _claves;
+    noClaves.unlock();
     clavesSwitch->unlock(noIncrementar);
     return res;
 }
+*/
+std::vector<std::string> HashMapConcurrente::claves(){
+    noClaves.lock();
 
-unsigned int HashMapConcurrente::valor(std::string clave) {
-    ListaAtomica<hashMapPair> * list = tabla[hashIndex(clave)];
+    std::vector<std::string> res = _claves;
 
-    auto it = list->crearIt();
-    int value = 0;
+    noClaves.unlock();
+    
+    return res;
+}
 
-    while (it.haySiguiente()){
-        if (it.siguiente().first == clave)
-            value = it.siguiente().second;
-        it.avanzar();
-    }
-        
+uint HashMapConcurrente::valor(std::string clave){
+    uint index = hashIndex(clave);
+
+    ListaAtomica<hashMapPair> *list = tabla[index];
+
+    {
+        std::lock_guard<std::mutex> lock(mtx[index]);
+
+        auto it = list->crearIt();
+        int value = 0;
+
+        while (it.haySiguiente()){
+            if (it.siguiente().first == clave)
+                value = it.siguiente().second;
+            it.avanzar();
+        }
+    }    
+
     return value;
 }
 
-hashMapPair HashMapConcurrente::maximo() {
+hashMapPair HashMapConcurrente::maximo(){
     hashMapPair *max = new hashMapPair();
     max->second = 0;
 
-    for (unsigned int index = 0; index < HashMapConcurrente::cantLetras; index++) {
-        for (
-            auto it = tabla[index]->crearIt();
-            it.haySiguiente();
-            it.avanzar()
-        ) {
-            if (it.siguiente().second > max->second) {
+    for(uint index = 0; index < HashMapConcurrente::cantLetras; index++) mtx[index].lock();
+
+    for (uint index = 0; index < HashMapConcurrente::cantLetras; index++){
+        for (auto it = tabla[index]->crearIt(); it.haySiguiente(); it.avanzar()){
+            if (it.siguiente().second > max->second){
                 max->first = it.siguiente().first;
                 max->second = it.siguiente().second;
             }
         }
+        mtx[index].unlock();
     }
-
     return *max;
 }
 
-hashMapPair HashMapConcurrente::maximoParalelo(unsigned int cantThreads) {
-    // Completar (Ejercicio 3)
+void calculateMaxPerRow(){
+    uint pos;
+
+    while((pos = nextPos.fetch_add(1)) < HashMapConcurrente::cantLetras){
+    
+        hashMapPair *max = new hashMapPair();
+
+        mtx[pos].lock();
+
+        for (auto it = tabla[pos]->crearIt(); it.haySiguiente(); it.avanzar()){
+            if (it.siguiente().second > max->second)
+                max = it.siguiente();
+        }
+        mtx[pos].unlock();
+
+        maximomtx.lock();
+
+        if(max->second > maximoGlobal->second) maximoGlobal = max;
+
+        maximomtx.unlock();
+    }
+}
+
+hashMapPair HashMapConcurrente::maximoParalelo(uint cantThreads){
+    vector<std::thread> threads(cantThreads);
+    for (int i = 0; i < cantThreads; i++)
+        threads.emplace_back(calculateMaxPerRow);
+
+    for(auto &t : threads)
+        t.join();
+    
+    return maximoGlobal;
 }
 
 #endif

@@ -7,15 +7,13 @@
 
 #include "ListaAtomica.hpp"
 
-typedef std::pair<std::string, unsigned int> hashMapPair;
+typedef std::pair<std::string, uint> hashMapPair;
 
 struct Lightswitch{
-   unsigned int counter;
+   uint counter;
    std::mutex self;
 
-   Lightswitch(){
-      counter = 0;
-   }
+   Lightswitch(){ counter = 0; }
 
    void lock(std::mutex& barrier){
       self.lock();
@@ -36,22 +34,22 @@ struct Lightswitch{
 
 class HashMapConcurrente {
  public:
-    static const unsigned int cantLetras = 26;
+    static const uint cantLetras = 26;
 
     HashMapConcurrente();
 
     void incrementar(std::string clave);
     std::vector<std::string> claves();
-    unsigned int valor(std::string clave);
+    uint valor(std::string clave);
 
     hashMapPair maximo();
-    hashMapPair maximoParalelo(unsigned int cantThreads);
+    hashMapPair maximoParalelo(uint cantThreads);
 
  private:
     ListaAtomica<hashMapPair> *tabla[HashMapConcurrente::cantLetras];
     std::vector<std::string> _claves;
 
-    static unsigned int hashIndex(std::string clave);
+    static uint hashIndex(std::string clave);
 };
 
 #endif  /* HMC_HPP */
