@@ -19,4 +19,6 @@ void cargarMultiplesArchivos(
     std::vector<std::string> filePaths
 );
 
+uint nextFile;
+
 #endif /* HMC_ARCHIVOS_HPP */

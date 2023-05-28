@@ -8,10 +8,7 @@
 
 #include "CargarArchivos.hpp"
 
-int cargarArchivo(
-    HashMapConcurrente &hashMap,
-    std::string filePath
-) {
+int cargarArchivo(HashMapConcurrente &hashMap, std::string filePath) {
     std::fstream file;
     int cant = 0;
     std::string palabraActual;
@@ -23,7 +20,7 @@ int cargarArchivo(
         return -1;
     }
     while (file >> palabraActual) {
-        // Completar (Ejercicio 4)
+        hashMap.incrementar(palabraActual);
         cant++;
     }
     // Cierro el archivo.
@@ -36,13 +33,20 @@ int cargarArchivo(
     return cant;
 }
 
+void loadFiles(HashMapConcurrente &hashMap, std::vector<std::string> filePaths){
+    uint pos;
+    while((pos = nextFile.fetch_sub(1)) >= 0)
+        cargarArchivo(hashMap, filePaths[pos]);
+}
 
-void cargarMultiplesArchivos(
-    HashMapConcurrente &hashMap,
-    unsigned int cantThreads,
-    std::vector<std::string> filePaths
-) {
-    // Completar (Ejercicio 4)
+void cargarMultiplesArchivos(HashMapConcurrente &hashMap, unsigned int cantThreads, std::vector<std::string> filePaths) {
+    vector<std::thread> threads(cantThreads);
+    nextFile = filePaths.size() - 1;
+    for (int i = 0; i < cantThreads; i++)
+        threads.emplace_back(loadFiles, hashMap, filePaths);
+
+    for(auto &t : threads)
+        t.join();
 }
 
 #endif
