@@ -8,16 +8,11 @@
 
 #include "HashMapConcurrente.hpp"
 
-int cargarArchivo(
-    HashMapConcurrente &hashMap,
-    std::string filePath
-);
+using namespace std;
 
-void cargarMultiplesArchivos(
-    HashMapConcurrente &hashMap,
-    unsigned int cantThreads,
-    std::vector<std::string> filePaths
-);
+int cargarArchivo(HashMapConcurrente &hashMap, string filePath);
+
+void cargarMultiplesArchivos(HashMapConcurrente &hashMap, uint cantThreads, vector<string> filePaths);
 
 uint nextFile;
 

@@ -8,45 +8,51 @@
 
 #include "CargarArchivos.hpp"
 
-int cargarArchivo(HashMapConcurrente &hashMap, std::string filePath) {
-    std::fstream file;
+using namespace std;
+
+int cargarArchivo(HashMapConcurrente& hashMap, string filePath) {
+
+    fstream file;
     int cant = 0;
-    std::string palabraActual;
+    string palabraActual;
 
     // Abro el archivo.
     file.open(filePath, file.in);
-    if (!file.is_open()) {
-        std::cerr << "Error al abrir el archivo '" << filePath << "'" << std::endl;
+    if (not file.is_open()) {
+        cerr << "Error al abrir el archivo '" << filePath << "'" << endl;
         return -1;
     }
     while (file >> palabraActual) {
         hashMap.incrementar(palabraActual);
         cant++;
     }
+
     // Cierro el archivo.
-    if (!file.eof()) {
-        std::cerr << "Error al leer el archivo" << std::endl;
+    if (not file.eof()) {
+        cerr << "Error al leer el archivo" << endl;
         file.close();
         return -1;
     }
     file.close();
+    
     return cant;
 }
 
-void loadFiles(HashMapConcurrente &hashMap, std::vector<std::string> filePaths){
+void loadFiles(HashMapConcurrente& hashMap, vector<string> filePaths) {
+
     uint pos;
-    while((pos = nextFile.fetch_sub(1)) >= 0)
-        cargarArchivo(hashMap, filePaths[pos]);
+
+    while((pos = nextFile.fetch_sub(1)) >= 0) cargarArchivo(hashMap, filePaths[pos]);
 }
 
-void cargarMultiplesArchivos(HashMapConcurrente &hashMap, unsigned int cantThreads, std::vector<std::string> filePaths) {
-    vector<std::thread> threads(cantThreads);
-    nextFile = filePaths.size() - 1;
-    for (int i = 0; i < cantThreads; i++)
-        threads.emplace_back(loadFiles, hashMap, filePaths);
+void cargarMultiplesArchivos(HashMapConcurrente& hashMap, uint cantThreads, vector<string> filePaths) {
 
-    for(auto &t : threads)
-        t.join();
+    vector<thread> threads(cantThreads);
+    nextFile = filePaths.size() - 1;
+
+    for (int i = 0; i < cantThreads; i++) threads.emplace_back(loadFiles, hashMap, filePaths);
+
+    for(auto &t : threads) t.join();
 }
 
 #endif

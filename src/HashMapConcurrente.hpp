@@ -7,49 +7,49 @@
 
 #include "ListaAtomica.hpp"
 
-typedef std::pair<std::string, uint> hashMapPair;
+using namespace std;
 
-struct Lightswitch{
-   uint counter;
-   std::mutex self;
+typedef pair<string, uint> hashMapPair;
 
-   Lightswitch(){ counter = 0; }
+struct Lightswitch {
+    uint counter;
+    mutex self;
 
-   void lock(std::mutex& barrier){
-      self.lock();
-         counter++;
-         if (counter == 1)
-            barrier.lock();
-      self.unlock();
-   }
-   
-   void unlock(std::mutex& barrier){
-      self.lock();
-         counter--;
-         if (counter == 0)
-            barrier.unlock();
-      self.unlock();
-   }
+    Lightswitch() { counter = 0; }
+
+    void lock(mutex& barrier) {
+        self.lock();
+        counter++;
+        if (counter == 1) barrier.lock();
+        self.unlock();
+    }
+
+    void unlock(mutex& barrier) {
+        self.lock();
+        counter--;
+        if (counter == 0) barrier.unlock();
+        self.unlock();
+    }
 };
 
 class HashMapConcurrente {
- public:
+public:
     static const uint cantLetras = 26;
 
     HashMapConcurrente();
 
-    void incrementar(std::string clave);
-    std::vector<std::string> claves();
-    uint valor(std::string clave);
+    void incrementar(string clave);
+    vector<string> claves();
+    uint valor(string clave);
 
     hashMapPair maximo();
     hashMapPair maximoParalelo(uint cantThreads);
 
- private:
-    ListaAtomica<hashMapPair> *tabla[HashMapConcurrente::cantLetras];
-    std::vector<std::string> _claves;
+private:
+    ListaAtomica<hashMapPair>* tabla[HashMapConcurrente::cantLetras];
+    vector<string> _claves;
 
-    static uint hashIndex(std::string clave);
+    static uint hashIndex(string clave);
 };
 
 #endif  /* HMC_HPP */
