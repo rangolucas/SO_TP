@@ -50,7 +50,7 @@ public:
 
 private:
 
-    ListaAtomica<hashMapPair>* tabla[HashMapConcurrente::cantLetras];
+    ListaAtomica<hashMapPair>* tabla[HashMapConcurrente::cantLetras]{};
     vector<string> _claves;
 
     static uint hashIndex(string clave);

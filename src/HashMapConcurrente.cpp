@@ -2,7 +2,6 @@
 #define CHM_CPP
 
 #include <iostream>
-#include <pthread.h>
 #include <thread>
 
 #include "HashMapConcurrente.hpp"
@@ -21,8 +20,7 @@ atomic<uint> proxima_entrada;
 
 HashMapConcurrente::HashMapConcurrente() {
 
-    for (uint i = 0; i < HashMapConcurrente::cantLetras; i++)
-        tabla[i] = new ListaAtomica<hashMapPair>();
+    for (auto & bucket : tabla) bucket = new ListaAtomica<hashMapPair>();
 
     // clavesSwitch = new Lightswitch();
     // incrementarSwitch = new Lightswitch();
@@ -37,7 +35,7 @@ void HashMapConcurrente::incrementar(string clave) {
     uint idx = hashIndex(clave);
 
     ListaAtomica<hashMapPair>* lista = tabla[idx];
-    lock_guard<mutex> lock(mutex_entradas[idx]);
+    lock_guard<mutex> lock_bucket(mutex_entradas[idx]);
 
     auto it = lista->crearIt();
 
@@ -49,13 +47,10 @@ void HashMapConcurrente::incrementar(string clave) {
         //incrementarSwitch->lock(mutex_claves);
         //noIncrementar.unlock();
 
-        mutex_claves.lock();
-
+        lock_guard<mutex> lock_claves(mutex_claves);
         lista->insertar(hashMapPair(clave, 1));
         _claves.push_back(clave);
     
-        mutex_claves.unlock();
-
         //incrementarSwitch->unlock(mutex_claves);
     } else it.siguiente().second++;
 }
@@ -72,14 +67,8 @@ vector<string> HashMapConcurrente::claves(){
 */
 
 vector<string> HashMapConcurrente::claves() {
-
-    mutex_claves.lock();
-
-    vector<string> res = _claves;
-
-    mutex_claves.unlock();
-    
-    return res;
+    lock_guard<mutex> lock(mutex_claves);
+    return _claves;
 }
 
 // Que pasa si claves() es asi?
@@ -100,10 +89,7 @@ uint HashMapConcurrente::valor(string clave) {
 
     auto it = lista->crearIt();
 
-    while (it.haySiguiente()) {
-        if (it.siguiente().first == clave) break;
-        it.avanzar();
-    }
+    while (it.haySiguiente() and it.siguiente().first != clave) it.avanzar();
 
     return it.haySiguiente() ? it.siguiente().second : 0;
 }
@@ -113,15 +99,11 @@ hashMapPair HashMapConcurrente::maximo() {
     hashMapPair* max = new hashMapPair();
     max->second = 0;
 
-    for (uint idx = 0; idx < HashMapConcurrente::cantLetras; idx++) mutex_entradas[idx].lock();
+    for (auto & mutex_entrada : mutex_entradas) mutex_entrada.lock();
 
     for (uint idx = 0; idx < HashMapConcurrente::cantLetras; idx++) {
-        for (auto it = tabla[idx]->crearIt(); it.haySiguiente(); it.avanzar()) {
-            if (it.siguiente().second > max->second) {
-                max->first = it.siguiente().first;
-                max->second = it.siguiente().second;
-            }
-        }
+        for (auto it = tabla[idx]->crearIt(); it.haySiguiente(); it.avanzar())
+            if (it.siguiente().second > max->second) *max = it.siguiente();
         mutex_entradas[idx].unlock();
     }
     return *max;
