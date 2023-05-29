@@ -10,8 +10,6 @@
 
 using namespace std;
 
-atomic<uint> proximo_archivo;
-
 int cargarArchivo(HashMapConcurrente& hashMap, string filePath) {
 
     fstream file;
@@ -42,12 +40,12 @@ int cargarArchivo(HashMapConcurrente& hashMap, string filePath) {
 
 void cargarMultiplesArchivos(HashMapConcurrente& hashMap, uint cantThreads, vector<string> filePaths) {
 
-    proximo_archivo = 0;
+    atomic<uint> proximo_archivo(0);
 
     vector<thread> threads;
 
     for (int i = 0; i < cantThreads; i++)
-        threads.emplace_back([&hashMap, &filePaths]() {
+        threads.emplace_back([&hashMap, &filePaths, &proximo_archivo]() {
             uint archivo = proximo_archivo.fetch_add(1);
 
             while (archivo < filePaths.size()) {
