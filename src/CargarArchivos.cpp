@@ -5,7 +5,6 @@
 #include <iostream>
 #include <fstream>
 #include <thread>
-#include <pthread.h>
 
 #include "CargarArchivos.hpp"
 
@@ -41,20 +40,21 @@ int cargarArchivo(HashMapConcurrente& hashMap, string filePath) {
     return cant;
 }
 
-void loadFiles(HashMapConcurrente&& hashMap, vector<string> filePaths) {
-
-    uint archivo;
-
-    while ((archivo = proximo_archivo.fetch_sub(1)) >= 0) cargarArchivo(hashMap, filePaths[archivo]);
-}
-
 void cargarMultiplesArchivos(HashMapConcurrente& hashMap, uint cantThreads, vector<string> filePaths) {
 
-    proximo_archivo = filePaths.size() - 1;
+    proximo_archivo = 0;
 
     vector<thread> threads;
 
-    for (int i = 0; i < cantThreads; i++) threads.emplace_back(loadFiles, hashMap, filePaths);
+    for (int i = 0; i < cantThreads; i++)
+        threads.emplace_back([&hashMap, &filePaths]() {
+            uint archivo = proximo_archivo.fetch_add(1);
+
+            while (archivo < filePaths.size()) {
+                cargarArchivo(hashMap, filePaths[archivo]);
+                archivo = proximo_archivo.fetch_add(1);
+            }
+        });
 
     for (auto &t : threads) t.join();
 }
