@@ -159,7 +159,7 @@ hashMapPair HashMapConcurrente::maximoParalelo(uint cantThreads) {
     
     vector<thread> threads;
 
-    for (uint i = 0; i < cantThreads; i++) threads.emplace_back([this]() { return maximoPorEntrada(); });
+    for (uint i = 0; i < cantThreads; i++) threads.emplace_back(&HashMapConcurrente::maximoPorEntrada, this);
     for (auto &t : threads) t.join();
     
     return *maximo_global;
