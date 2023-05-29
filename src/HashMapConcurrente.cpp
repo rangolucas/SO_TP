@@ -9,25 +9,23 @@
 
 using namespace std;
 
-array<mutex, HashMapConcurrente::cantLetras> mtx;
-Lightswitch *clavesSwitch;
-Lightswitch *incrementarSwitch;
-mutex noIncrementar;
-mutex noClaves;
-mutex maximomtx;
-hashMapPair* maximoGlobal;
+mutex mutex_entradas[HashMapConcurrente::cantLetras];
+mutex mutex_claves;
+mutex mutex_maximo;
+hashMapPair* maximo_global;
+atomic<uint> proxima_entrada;
 
-atomic<uint> nextPos;
+// Lightswitch *clavesSwitch;
+// Lightswitch *incrementarSwitch;
+// mutex noIncrementar;
 
 HashMapConcurrente::HashMapConcurrente() {
 
     for (uint i = 0; i < HashMapConcurrente::cantLetras; i++)
         tabla[i] = new ListaAtomica<hashMapPair>();
 
-    clavesSwitch = new Lightswitch();
-    incrementarSwitch = new Lightswitch();
-    maximoGlobal = &{"", 0};
-    nextPos = 0;
+    // clavesSwitch = new Lightswitch();
+    // incrementarSwitch = new Lightswitch();
 }
 
 uint HashMapConcurrente::hashIndex(string clave) {
@@ -36,36 +34,38 @@ uint HashMapConcurrente::hashIndex(string clave) {
 
 void HashMapConcurrente::incrementar(string clave) {
 
-    uint index = hashIndex(clave);
-    ListaAtomica<hashMapPair>* list = tabla[index];
-    lock_guard<mutex> lock(mtx[index]);
+    uint idx = hashIndex(clave);
 
-    auto it = list->crearIt();
+    ListaAtomica<hashMapPair>* lista = tabla[idx];
+    lock_guard<mutex> lock(mutex_entradas[idx]);
+
+    auto it = lista->crearIt();
 
     while (it.haySiguiente() and it.siguiente().first != clave) it.avanzar();
 
     if (not it.haySiguiente()) {
+
         //noIncrementar.lock();
-        //incrementarSwitch->lock(noClaves);
+        //incrementarSwitch->lock(mutex_claves);
         //noIncrementar.unlock();
 
-        noClaves.lock();
+        mutex_claves.lock();
 
-        list->insertar(hashMapPair(clave, 1));
+        lista->insertar(hashMapPair(clave, 1));
         _claves.push_back(clave);
     
-        noClaves.unlock();
+        mutex_claves.unlock();
 
-        //incrementarSwitch->unlock(noClaves);
+        //incrementarSwitch->unlock(mutex_claves);
     } else it.siguiente().second++;
 }
 
 /*
 vector<string> HashMapConcurrente::claves(){
     clavesSwitch->lock(noIncrementar);
-    noClaves.lock();
+    mutex_claves.lock();
     vector<string> res = _claves;
-    noClaves.unlock();
+    mutex_claves.unlock();
     clavesSwitch->unlock(noIncrementar);
     return res;
 }
@@ -73,33 +73,39 @@ vector<string> HashMapConcurrente::claves(){
 
 vector<string> HashMapConcurrente::claves() {
 
-    noClaves.lock();
+    mutex_claves.lock();
 
     vector<string> res = _claves;
 
-    noClaves.unlock();
+    mutex_claves.unlock();
     
     return res;
 }
 
+// Que pasa si claves() es asi?
+// vector<string> HashMapConcurrente::claves() {
+//     return _claves;
+// }
+// La operacion return es atomica? Quizas no hace falta el mutex aca.
+
 uint HashMapConcurrente::valor(string clave) {
 
-    uint index = hashIndex(clave);
+    uint idx = hashIndex(clave);
 
-    ListaAtomica<hashMapPair>* list = tabla[index];
+    // si nos guardamos una copia de la lista no hace falta usar mutex, no?
+    // ya tenemos la copia que no va a cambiar, y podemos dejar que se siga modificando la tabla sin problema
+    ListaAtomica<hashMapPair>* lista = tabla[idx];
 
-    {
-        lock_guard<mutex> lock(mtx[index]);
+    lock_guard<mutex> lock(mutex_entradas[idx]);
 
-        auto it = list->crearIt();
-        int value = 0;
+    auto it = lista->crearIt();
 
-        while (it.haySiguiente()) {
-            if (it.siguiente().first == clave) value = it.siguiente().second;
-            it.avanzar();
-        }
+    while (it.haySiguiente()) {
+        if (it.siguiente().first == clave) break;
+        it.avanzar();
     }
-    return value;
+
+    return it.haySiguiente() ? it.siguiente().second : 0;
 }
 
 hashMapPair HashMapConcurrente::maximo() {
@@ -107,7 +113,7 @@ hashMapPair HashMapConcurrente::maximo() {
     hashMapPair* max = new hashMapPair();
     max->second = 0;
 
-    for (uint idx = 0; idx < HashMapConcurrente::cantLetras; idx++) mtx[idx].lock();
+    for (uint idx = 0; idx < HashMapConcurrente::cantLetras; idx++) mutex_entradas[idx].lock();
 
     for (uint idx = 0; idx < HashMapConcurrente::cantLetras; idx++) {
         for (auto it = tabla[idx]->crearIt(); it.haySiguiente(); it.avanzar()) {
@@ -116,42 +122,47 @@ hashMapPair HashMapConcurrente::maximo() {
                 max->second = it.siguiente().second;
             }
         }
-        mtx[idx].unlock();
+        mutex_entradas[idx].unlock();
     }
     return *max;
 }
 
-void calculateMaxPerRow() {
+void HashMapConcurrente::maximoPorEntrada() {
 
-    uint pos;
+    uint entrada;
 
-    while ((pos = nextPos.fetch_add(1)) < HashMapConcurrente::cantLetras) {
+    while ((entrada = proxima_entrada.fetch_add(1)) < HashMapConcurrente::cantLetras) {
     
         hashMapPair* max = new hashMapPair();
 
-        mtx[pos].lock();
+        mutex_entradas[entrada].lock();
 
-        for (auto it = tabla[pos]->crearIt(); it.haySiguiente(); it.avanzar())
-            if (it.siguiente().second > max->second) max = it.siguiente();
+        for (auto it = tabla[entrada]->crearIt(); it.haySiguiente(); it.avanzar())
+            if (it.siguiente().second > max->second) max = &it.siguiente();
 
-        mtx[pos].unlock();
+        mutex_entradas[entrada].unlock();
 
-        maximomtx.lock();
+        mutex_maximo.lock();
 
-        if (max->second > maximoGlobal->second) maximoGlobal = max;
+        if (max->second > maximo_global->second) maximo_global = max;
 
-        maximomtx.unlock();
+        mutex_maximo.unlock();
     }
 }
 
-hashMapPair HashMapConcurrente::maximoParalelo(uint cantThreads) {
-    
-    vector<thread> threads(cantThreads);
 
-    for (int i = 0; i < cantThreads; i++) threads.emplace_back(calculateMaxPerRow);
-    for(auto &t : threads) t.join();
+hashMapPair HashMapConcurrente::maximoParalelo(uint cantThreads) {
+
+    maximo_global = new hashMapPair();
+    maximo_global->second = 0;
+    proxima_entrada = 0;
     
-    return maximoGlobal;
+    vector<thread> threads;
+
+    for (uint i = 0; i < cantThreads; i++) threads.emplace_back(maximoPorEntrada);
+    for (auto &t : threads) t.join();
+    
+    return *maximo_global;
 }
 
 #endif

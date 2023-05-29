@@ -10,10 +10,8 @@
 
 using namespace std;
 
-int cargarArchivo(HashMapConcurrente &hashMap, string filePath);
+int cargarArchivo(HashMapConcurrente& hashMap, string filePath);
 
-void cargarMultiplesArchivos(HashMapConcurrente &hashMap, uint cantThreads, vector<string> filePaths);
-
-uint nextFile;
+void cargarMultiplesArchivos(HashMapConcurrente& hashMap, uint cantThreads, vector<string> filePaths);
 
 #endif /* HMC_ARCHIVOS_HPP */

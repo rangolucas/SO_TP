@@ -8,9 +8,8 @@ using namespace std;
 
 template<typename T>
 class ListaAtomica {
-private:
 
-    mutex mtx;
+private:
 
     struct Nodo {
         Nodo(const T& val) : _valor(val), _siguiente(nullptr) {}
@@ -20,8 +19,10 @@ private:
     };
 
     atomic<Nodo*> _cabeza;
+    mutex _mutex;
 
 public:
+
     ListaAtomica() : _cabeza(nullptr) {}
 
     ~ListaAtomica() {
@@ -36,7 +37,7 @@ public:
 
     void insertar(const T& valor) {
         Nodo* n = new Nodo(valor);
-        lock_guard<mutex> lk(mtx);
+        lock_guard<mutex> lock(_mutex);
         n->_siguiente = _cabeza.load();
         _cabeza.store(n);
     }
@@ -63,7 +64,9 @@ public:
 
 
     class Iterador {
+
     private:
+
         ListaAtomica* _lista;
 
         typename ListaAtomica::Nodo* _nodo_sig;
@@ -74,6 +77,7 @@ public:
         friend typename ListaAtomica<T>::Iterador ListaAtomica<T>::crearIt();
 
     public:
+
         Iterador() : _lista(nullptr), _nodo_sig(nullptr) {}
 
         Iterador& operator=(const typename ListaAtomica::Iterador& otro) {
