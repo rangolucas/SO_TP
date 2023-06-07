@@ -37,9 +37,17 @@ public:
 
     void insertar(const T& valor) {
         Nodo* n = new Nodo(valor);
-        lock_guard<mutex> lock(_mutex);
-        n->_siguiente = _cabeza.load();
-        _cabeza.store(n);
+        // lock_guard<mutex> lock(_mutex);
+        // n->_siguiente = _cabeza.load();
+        // _cabeza.store(n);
+
+        Nodo* old_head = _cabeza.load();
+
+        do
+            n->_siguiente = old_head;
+        while(!_cabeza.compare_exchange_weak(old_head, n,
+                                          std::memory_order_release,
+                                          std::memory_order_relaxed));
     }
 
     T& cabeza() const {
