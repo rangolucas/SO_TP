@@ -27,7 +27,9 @@ int main() {
 
     ofstream output_file;
     output_file.open("experimentacion/outputs/tiempos-" + to_string(cantArchivos) + ".csv");
-    output_file << "cant_threads,tiempo_archivos,tiempo_maximo\n";
+    string csvHeader = "cant_threads,tiempo_archivos,tiempo_maximo\n";
+    output_file << csvHeader;
+    cout << csvHeader;
 
     medirTiempoSecuencial(archivos, output_file);
     medirTiempoConcurrente(archivos, output_file);
