@@ -11,27 +11,6 @@ using namespace std;
 
 typedef pair<string, uint> hashMapPair;
 
-// struct Lightswitch {
-//     uint counter;
-//     mutex self;
-
-//     Lightswitch() { counter = 0; }
-
-//     void lock(mutex& barrier) {
-//         self.lock();
-//         counter++;
-//         if (counter == 1) barrier.lock();
-//         self.unlock();
-//     }
-
-//     void unlock(mutex& barrier) {
-//         self.lock();
-//         counter--;
-//         if (counter == 0) barrier.unlock();
-//         self.unlock();
-//     }
-// };
-
 class HashMapConcurrente {
 
 public:

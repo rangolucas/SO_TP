@@ -14,16 +14,10 @@ mutex mutex_maximo;
 hashMapPair* maximo_global;
 atomic<uint> proxima_entrada;
 
-// Lightswitch *clavesSwitch;
-// Lightswitch *incrementarSwitch;
-// mutex noIncrementar;
-
 HashMapConcurrente::HashMapConcurrente() {
 
     for (auto & bucket : tabla) bucket = new ListaAtomica<hashMapPair>();
 
-    // clavesSwitch = new Lightswitch();
-    // incrementarSwitch = new Lightswitch();
 }
 
 uint HashMapConcurrente::hashIndex(string clave) {
@@ -43,46 +37,22 @@ void HashMapConcurrente::incrementar(string clave) {
 
     if (not it.haySiguiente()) {
 
-        //noIncrementar.lock();
-        //incrementarSwitch->lock(mutex_claves);
-        //noIncrementar.unlock();
-
         lock_guard<mutex> lock_claves(mutex_claves);
         lista->insertar(hashMapPair(clave, 1));
         _claves.push_back(clave);
     
-        //incrementarSwitch->unlock(mutex_claves);
     } else it.siguiente().second++;
 }
-
-/*
-vector<string> HashMapConcurrente::claves(){
-    clavesSwitch->lock(noIncrementar);
-    mutex_claves.lock();
-    vector<string> res = _claves;
-    mutex_claves.unlock();
-    clavesSwitch->unlock(noIncrementar);
-    return res;
-}
-*/
 
 vector<string> HashMapConcurrente::claves() {
     lock_guard<mutex> lock(mutex_claves);
     return _claves;
 }
 
-// Que pasa si claves() es asi?
-// vector<string> HashMapConcurrente::claves() {
-//     return _claves;
-// }
-// La operacion return es atomica? Quizas no hace falta el mutex aca.
-
 uint HashMapConcurrente::valor(string clave) {
 
     uint idx = hashIndex(clave);
 
-    // si nos guardamos una copia de la lista no hace falta usar mutex, no?
-    // ya tenemos la copia que no va a cambiar, y podemos dejar que se siga modificando la tabla sin problema
     ListaAtomica<hashMapPair>* lista = tabla[idx];
 
     lock_guard<mutex> lock(mutex_entradas[idx]);
