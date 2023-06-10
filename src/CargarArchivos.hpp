@@ -12,6 +12,8 @@ using namespace std;
 
 int cargarArchivo(HashMapConcurrente& hashMap, string filePath);
 
+void cargarMultiplesArchivosSecuencial(HashMapConcurrente& hashMap, const vector<string>& archivos);
+
 void cargarMultiplesArchivos(HashMapConcurrente& hashMap, uint cantThreads, vector<string> filePaths);
 
 #endif /* HMC_ARCHIVOS_HPP */

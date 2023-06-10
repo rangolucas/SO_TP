@@ -4,7 +4,7 @@ LDFLAGS = -lpthread
 
 BUILD_DIR = ./build
 
-TARGET = ContarPalabras
+TARGET = Experimentacion
 TEST_TARGET = UnitTests
 
 OBJECTS = HashMapConcurrente.o CargarArchivos.o

@@ -38,6 +38,10 @@ int cargarArchivo(HashMapConcurrente& hashMap, string filePath) {
     return cant;
 }
 
+void cargarMultiplesArchivosSecuencial(HashMapConcurrente& hashMap, const vector<string>& archivos) {
+    for (const string& archivo : archivos) cargarArchivo(hashMap, archivo);
+}
+
 void cargarMultiplesArchivos(HashMapConcurrente& hashMap, uint cantThreads, vector<string> filePaths) {
 
     atomic<uint> proximo_archivo(0);
