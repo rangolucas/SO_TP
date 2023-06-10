@@ -96,17 +96,17 @@ uint HashMapConcurrente::valor(string clave) {
 
 hashMapPair HashMapConcurrente::maximo() {
 
-    hashMapPair* max = new hashMapPair();
-    max->second = 0;
+    hashMapPair max;
+    max.second = 0;
 
     for (auto & mutex_entrada : mutex_entradas) mutex_entrada.lock();
 
     for (uint idx = 0; idx < HashMapConcurrente::cantLetras; idx++) {
         for (auto it = tabla[idx]->crearIt(); it.haySiguiente(); it.avanzar())
-            if (it.siguiente().second > max->second) *max = it.siguiente();
+            if (it.siguiente().second > max.second) max = it.siguiente();
         mutex_entradas[idx].unlock();
     }
-    return *max;
+    return max;
 }
 
 void HashMapConcurrente::maximoPorEntrada() {
