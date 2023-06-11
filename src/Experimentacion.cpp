@@ -68,7 +68,7 @@ void experimento2(vector<string> &archivos, uint cantThreads) {
             cargarMultiplesArchivos(hashMap, cantThreads, archivosIteracion);
         });
         double tiempoMaximo = medirTiempo([&hashMap, cantThreads]() {
-            hashMap.maximoParalelo(cantThreads);
+            for (int rep = 0; rep <= (cantThreads == 1024) ? 150 : 30; rep++) hashMap.maximoParalelo(cantThreads);
         });
 
         output_file << cantArchivos << "," << tiempoArchivos << "," << tiempoMaximo << endl;
