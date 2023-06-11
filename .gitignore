@@ -360,4 +360,5 @@ pyrightconfig.json
 
 
 **/experimentacion/inputs
-**/experimentacion/outputs
+**/experimentacion/experimento-1/outputs/**
+**/experimentacion/experimento-2/outputs/**
